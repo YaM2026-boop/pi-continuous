@@ -1,0 +1,42 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (MinGW-w64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-boost
+
+      - name: Compile
+        shell: msys2 {0}
+        run: g++ -O2 -std=c++17 -Wall -static -o main.exe main.cpp
+
+      - name: Smoke test (算到 1000 位就停)
+        shell: msys2 {0}
+        run: ./main.exe --step 1000 --stop 1000 --quiet | head -c 60
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: pi-continuous-windows
+          path: main.exe
+          if-no-files-found: error
